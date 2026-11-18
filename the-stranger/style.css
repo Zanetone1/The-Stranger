@@ -1,0 +1,999 @@
+/* ===== Tokens ===== */
+:root {
+  --salt: #F7F8F6;       /* base: bleached, slightly cool white */
+  --limestone: #E7E4DC;  /* Algiers walls */
+  --ink: #1C2630;        /* graphite blue, never pure black */
+  --ink-soft: #55606B;
+  --brass: #9C7C3C;      /* the one rich accent */
+  --sea: #8FB3C2;
+  --glare: #FFF1C9;
+  --cell: #E6ECEF;       /* Part Two: cool prison light */
+  --dawn: #DCE3EA;       /* the last night, pale */
+
+  --serif: "Bodoni Moda", "Didot", Georgia, serif;
+  --sans: "Sora", "Helvetica Neue", Arial, sans-serif;
+
+  --heat: 0;             /* 0 → 1, driven by scroll in script.js */
+  --measure: 42rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--salt);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+:focus-visible { outline: 1px solid var(--brass); outline-offset: 4px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+em { font-family: var(--serif); font-style: italic; font-weight: 400; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+/* ===== The sun & glare ===== */
+.sun {
+  position: fixed;
+  left: 0; top: 0;
+  width: 46vmax; height: 46vmax;
+  margin: -23vmax 0 0 -23vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 241, 201, calc(.55 + var(--heat) * .45)) 0%, rgba(255, 241, 201, 0) 62%);
+  transform: translate(var(--sx, 70vw), var(--sy, 25vh)) scale(calc(.8 + var(--heat) * .9));
+  pointer-events: none;
+  z-index: 4;                /* sits above every section, so no background can hide it */
+  mix-blend-mode: multiply;  /* tints what's underneath instead of covering it */
+  transition: opacity 1.2s ease;
+}
+.glare {
+  position: fixed; inset: 0;
+  background: #fff;
+  opacity: calc(var(--heat) * .32);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  z-index: 3;
+}
+body.indoors .sun, body.indoors .glare { opacity: 0; }
+.sun { opacity: calc(1 - var(--white, 0)); }   /* the sun disappears into the white */
+body.indoors .sun { opacity: 0; }
+
+/* ===== Gauge ===== */
+.gauge {
+  position: fixed;
+  right: 1.75rem; top: 50%;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .75rem;
+  z-index: 10;
+  font-size: .8125rem;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+  transition: opacity .6s ease;
+}
+.gauge-value { font-variant-numeric: tabular-nums; }
+.gauge-track { position: relative; width: 1px; height: 9rem; background: rgba(28, 38, 48, .15); }
+.gauge-fill {
+  position: absolute; left: -1px; bottom: 0;
+  width: 3px; height: calc(var(--heat) * 100%);
+  background: var(--brass);
+}
+body.indoors .gauge { opacity: 0; }   /* in Part Two the clock takes its place */
+
+/* ===== Part Two clock: runs out as the story nears his death, then fades away ===== */
+.clock {
+  position: fixed;
+  right: 1.1rem; top: 50%;
+  width: 3.25rem;
+  transform: translateY(-50%);
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+}
+.clock.on { opacity: 1; }
+.clock svg { display: block; width: 100%; height: auto; }
+.clock-face { fill: none; stroke: rgba(28, 38, 48, .18); stroke-width: 1; }
+.clock-run {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.4;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--time, 0) * 100);
+  transform: rotate(-90deg);
+  transform-origin: 20px 20px;
+}
+.clock-hand {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  transform: rotate(calc(var(--time, 0) * 360deg));
+  transform-origin: 20px 20px;
+}
+.clock-pin { fill: var(--ink); }
+
+/* ===== Hero ===== */
+.hero {
+  position: relative; z-index: 2;
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  padding: 6rem clamp(1.5rem, 6vw, 6rem);
+}
+.hero-place { margin: 0 0 1.5rem; color: var(--ink-soft); font-size: .875rem; letter-spacing: .08em; }
+.hero-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(4.5rem, 17vw, 15rem);
+  line-height: .86;
+  letter-spacing: -.035em;
+  display: flex; flex-wrap: wrap;
+}
+/* The single orchestrated moment: the word comes apart as the heat rises */
+.hero-title span {
+  display: inline-block;
+  transition: transform 1.6s cubic-bezier(.2, .7, .1, 1), opacity 1.6s ease;
+  transform: translateY(.18em);
+  opacity: 0;
+}
+.loaded .hero-title span { transform: none; opacity: 1; }
+.loaded .hero-title span:nth-child(2) { transition-delay: .18s; }
+.loaded .hero-title span:nth-child(3) { transition-delay: .36s; }
+.hero-sub { margin: 2rem 0 0; font-size: 1.125rem; }
+.hero-opening {
+  justify-self: start;
+  margin: 3.5rem 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  display: grid;
+  gap: .5rem;
+}
+.opening-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  color: var(--brass);
+  transition: opacity .35s ease, filter .35s ease;
+}
+.opening-text.swapping { opacity: 0; filter: blur(6px); }
+.opening-hint {
+  font-size: .8125rem;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: rgba(156, 124, 60, .5);
+  text-underline-offset: 4px;
+}
+.hero-opening:hover .opening-hint { color: var(--ink); }
+.hero-byline { margin: .75rem 0 0; color: var(--ink-soft); font-size: .875rem; }
+.hero-time { margin: .35rem 0 0; color: var(--brass); font-size: .8125rem; letter-spacing: .02em; }
+
+/* Reading progress line */
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 11; pointer-events: none; }
+.progress-fill {
+  display: block; height: 100%;
+  background: var(--brass);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Editorial line breaks: no lonely last words in paragraphs, balanced headings */
+p { text-wrap: pretty; }
+h1, h2, h3, .watchers-q, .segue, .pull-quote p { text-wrap: balance; }
+.hero-cue {
+  justify-self: start;
+  margin-top: 4rem;
+  padding: .9rem 1.6rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: .875rem;
+  letter-spacing: .03em;
+  transition: background .3s ease, color .3s ease;
+}
+.hero-cue:hover { background: var(--ink); color: var(--salt); }
+
+/* ===== Shared section rhythm ===== */
+main { position: relative; z-index: 2; }
+.intro, .part, .court {
+  padding: clamp(5rem, 12vh, 9rem) clamp(1.5rem, 6vw, 6rem);
+}
+.lede {
+  max-width: 38rem;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.375rem, 2.4vw, 1.875rem);
+  line-height: 1.5;
+}
+/* Intro in two halves: the second sits on the right, lower down */
+.intro {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 36rem));
+  justify-content: space-between;
+  gap: 0 clamp(3rem, 6vw, 7rem);
+  padding-right: clamp(4rem, 8vw, 8rem); /* keeps clear of the heat gauge */
+  padding-top: clamp(2rem, 6vh, 4rem);
+}
+.lede-right { margin-top: clamp(11rem, 22.5vw, 20rem); }   /* still staggered, and on screen after "Begin reading" */
+
+.part-title {
+  margin: 0 0 4rem;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+.part-title span {
+  display: block;
+  margin-top: .75rem;
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--ink-soft);
+  letter-spacing: .04em;
+}
+
+/* Part One: a sun-coloured wash that deepens as the chapters go on */
+.part-one {
+  background: linear-gradient(180deg, var(--salt) 0%, #FBF5E6 30%, #FCF0D4 75%, #FBEFD6 100%);
+}
+
+/* Chapters: a real sequence, so they are numbered */
+.chapters { list-style: none; margin: 0; padding: 0; counter-reset: ch; }
+.part-two .chapters { counter-reset: ch 4; }
+.chapter {
+  counter-increment: ch;
+  display: grid;
+  grid-template-columns: 5rem minmax(0, var(--measure));
+  gap: 0 2rem;
+  padding: 3rem 0;
+  border-top: 1px solid rgba(28, 38, 48, .12);
+}
+.chapter::before {
+  content: counter(ch, upper-roman);
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  color: var(--brass);
+  line-height: 1.2;
+}
+.chapter h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+}
+.chapter .place { margin: .4rem 0 1.25rem; font-size: .875rem; color: var(--ink-soft); }
+.chapter .heat-tag { color: var(--brass); }
+.chapter p.body { margin: 0; }
+/* Names that open a small card (Bourdain, Spike): quiet dotted underline, nothing louder */
+.ref {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted rgba(156, 124, 60, .75);
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: color .25s ease;
+}
+.ref:hover, .ref[aria-expanded="true"] { color: var(--brass); }
+.ref-card {
+  position: absolute;
+  z-index: 9;
+  padding: .85rem 1rem;
+  border: 1px solid rgba(156, 124, 60, .35);
+  border-radius: 6px;
+  background: rgba(247, 248, 246, .97);
+  box-shadow: 0 12px 30px -20px rgba(28, 38, 48, .5);
+  font-size: .8125rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.ref-card.open { opacity: 1; transform: none; pointer-events: auto; }
+
+/* "What happens": a quiet button and the plain summary it reveals */
+.happens-btn {
+  margin: 0 0 1.25rem;
+  padding: .35rem .9rem;
+  border: 1px solid rgba(28, 38, 48, .25);
+  border-radius: 999px;
+  background: transparent;
+  font-size: .8125rem;
+  letter-spacing: .02em;
+  color: var(--ink-soft);
+  transition: border-color .3s ease, color .3s ease;
+}
+.happens-btn:hover, .happens-btn[aria-expanded="true"] { border-color: var(--brass); color: var(--ink); }
+.happens {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border-left: 2px solid var(--brass);
+  background: rgba(255, 255, 255, .45);
+  font-size: .9375rem;
+  color: var(--ink-soft);
+}
+.chapter > div { grid-column: 2; }
+
+/* ===== Sunday lunch ===== */
+.lunch {
+  position: relative;
+  padding: clamp(1rem, 3vh, 2.5rem) clamp(1.5rem, 6vw, 6rem) clamp(6rem, 14vh, 10rem); /* small top gap after Raymond */
+  text-align: center;
+  background: linear-gradient(180deg, #FBEFD6 0%, #EEF4F5 30%, #E4EFF2 70%, var(--glare) 100%); /* starts where Part One ends */
+}
+.lunch-num { margin: 0; font-family: var(--serif); font-size: 1.5rem; color: var(--brass); }
+.lunch-title {
+  margin: .5rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 1;
+}
+.lunch-place { margin: 1rem 0 0; font-size: .875rem; color: var(--ink-soft); }
+.lunch-place span { color: var(--brass); }
+
+.horizon {
+  display: block;
+  width: 100vw;
+  margin: 3.5rem 0 3rem calc(50% - 50vw);   /* runs edge to edge */
+  height: clamp(5rem, 10vw, 8rem);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+          mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+.waves path { fill: rgba(143, 179, 194, .35); }
+.waves .wave-2 { fill: rgba(143, 179, 194, .45); }
+.waves { animation: drift 22s linear infinite; }
+.waves .wave-2 { animation: drift-2 30s linear infinite; }
+@keyframes drift { to { transform: translateX(-300px); } }
+@keyframes drift-2 { to { transform: translateX(-400px); } }
+.watchers { fill: var(--ink); opacity: var(--watch, .06); transition: opacity .6s ease; }
+
+/* The lunch paragraphs step down the page from left to right, like walking down to the sea */
+.lunch-steps {
+  max-width: 60rem;   /* narrower, so the diagonal sits in the middle of the page */
+  margin: 0 auto;
+  text-align: left;
+}
+.lunch-steps p {
+  max-width: 26rem;
+  margin: 0 0 3rem;
+  font-family: var(--serif);
+  font-size: clamp(1.125rem, 1.6vw, 1.375rem);
+  line-height: 1.65;
+}
+.lunch-steps p:nth-child(1) { margin-left: 0; }
+.lunch-steps p:nth-child(2) { margin-left: 28%; }
+.lunch-steps p:nth-child(3) { margin-left: 56%; font-style: italic; color: var(--brass); }
+.lunch-steps p:nth-child(4) { margin-left: auto; margin-right: 0; }
+
+/* Line drawings in the empty corners beside the steps */
+.lunch-body { position: relative; max-width: 78rem; margin: 0 auto; }
+.sketch {
+  position: absolute;
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.sketch .fill { fill: rgba(156, 124, 60, .32); stroke: none; }
+.sketch-cig { bottom: -.25em; left: 0; width: 13rem; }
+/* the cigarette sits on the line, right after the word, with smoke rising above */
+.cig-inline { position: relative; display: inline-block; width: 0; height: 1em; margin-left: .6rem; } /* takes no space, so it never drops to a new line */
+/* A real burn: a scorched band on the paper, a glowing ember, and a growing column of grey ash */
+.sketch-cig { overflow: visible; }
+.sketch-cig .char { fill: url(#cig-char); stroke: none; }
+.sketch-cig .ash { fill: url(#cig-ash); stroke: rgba(120, 114, 104, .5); stroke-width: .6; }
+.sketch-cig .ember {
+  fill: url(#cig-ember);
+  stroke: none;
+  filter: drop-shadow(0 0 2.5px rgba(232, 110, 50, .85));
+  animation: ember 2.8s ease-in-out infinite;   /* a slow glow, like a gentle drag */
+  transition: opacity 1.2s ease;
+}
+@keyframes ember {
+  0%, 100% { opacity: .8; }
+  50% { opacity: 1; filter: drop-shadow(0 0 4.5px rgba(245, 135, 60, 1)); }
+}
+.sketch-cig.out .ember { opacity: 0; animation: none; }
+.sketch-cig.out .char { opacity: .6; }
+/* Click the cigarette: it becomes clickable, and the ember flares on each drag */
+.sketch-cig rect { pointer-events: all; cursor: pointer; }   /* "all" so the unfilled paper counts too */
+.sketch-cig:focus { outline: none; }
+.sketch-cig:focus-visible { outline: 1px solid var(--brass); outline-offset: 6px; }
+/* the small direction under the cigarette; fades once it's been clicked */
+.cig-hint {
+  margin: -2.25rem 0 3rem 56%;
+  font-size: .8125rem;
+  letter-spacing: .02em;
+  color: var(--ink-soft);
+  transition: opacity 1s ease;
+}
+.cig-hint.used { opacity: 0; }
+.sketch-cig.drag .ember { animation: none; opacity: 1; filter: drop-shadow(0 0 7px rgba(255, 140, 60, 1)); }
+
+/* The smoke screen over the whole page; --fog goes from 0 (clear) to 1 (thickest) */
+.fog {
+  position: fixed;
+  inset: -10%;
+  z-index: 6;
+  pointer-events: none;
+  opacity: calc(var(--fog, 0) * .85);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+  background:
+    radial-gradient(ellipse 40% 30% at 30% 40%, rgba(236, 238, 239, .9), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 72% 62%, rgba(226, 229, 231, .85), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 52% 18%, rgba(241, 241, 239, .8), transparent 70%),
+    rgba(230, 232, 233, .35);
+  animation: fog-drift 16s ease-in-out infinite alternate;
+}
+@keyframes fog-drift { to { transform: translate(3%, -2%) scale(1.06); } }
+
+/* pieces of ash that break off and fall */
+.ash-flake { fill: #C9C4BB; stroke: none; transform-box: fill-box; animation: ash-fall 1.6s ease-in forwards; }
+@keyframes ash-fall { to { transform: translate(8px, 70px) rotate(28deg); opacity: 0; } }
+.sketch-cig .smoke { transition: opacity 1.2s ease; }
+.smoke {
+  stroke: rgba(85, 96, 107, .7);
+  stroke-width: 1.4;
+  stroke-dasharray: 10 8;
+  animation: smoke 6s linear infinite;
+}
+.smoke-2 { stroke: rgba(85, 96, 107, .45); animation-duration: 8s; }
+.smoke-3 { stroke: rgba(85, 96, 107, .35); animation-duration: 7s; animation-delay: -2s; }
+.smoke-4 { stroke: rgba(85, 96, 107, .3); animation-duration: 5s; animation-delay: -1s; }
+@keyframes smoke {
+  0%   { stroke-dashoffset: 0;   opacity: .3; }
+  50%  { opacity: 1; }
+  100% { stroke-dashoffset: -64; opacity: .3; }
+}
+
+/* The tall smoke plume rising from the cigarette (drawn in script.js) */
+.plume { position: absolute; top: 0; pointer-events: none; overflow: visible; }
+.plume .wisp { fill: #6B7782; stroke: none; }
+/* on larger screens the tall plume replaces the small smoke on the cigarette */
+@media (min-width: 721px) { .sketch-cig .smoke { display: none; } }
+
+/* The web of connection: names on the sand, tied by threads */
+.web {
+  position: relative;
+  width: min(60rem, 100%);
+  height: clamp(22rem, 38vw, 34rem);
+  margin: 4rem auto 0;
+}
+.threads { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.threads line {
+  stroke: var(--ink);
+  stroke-opacity: .14;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke .4s ease, stroke-opacity .4s ease;
+}
+.threads line.one-sided { stroke-dasharray: 4 5; }
+.threads line.on { stroke: var(--brass); stroke-opacity: .9; stroke-width: 1.5; }
+.people { list-style: none; margin: 0; padding: 0; }
+.person {
+  position: absolute;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  transform: translate(-50%, -50%);
+  transition: opacity .4s ease;
+}
+.person.dim { opacity: .35; }
+.person button {
+  padding: .5rem .9rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(247, 248, 246, .75);
+  font-family: var(--serif);
+  font-size: 1.3125rem;
+  white-space: nowrap;
+  transition: border-color .3s ease, background .3s ease, color .3s ease;
+}
+.person button:hover { border-color: rgba(28, 38, 48, .3); }
+.person button[aria-pressed="true"] { background: var(--ink); color: var(--salt); }
+/* Meursault and Marie: the light of the day */
+.person.gold button[aria-pressed="true"] {
+  background: linear-gradient(135deg, #C9A45C, var(--brass));
+  color: #FFFDF6;
+  box-shadow: 0 0 0 6px rgba(201, 164, 92, .18), 0 8px 24px -8px rgba(156, 124, 60, .6);
+}
+/* the two figures: present, but tied to no one */
+.outsider {
+  position: absolute;
+  width: 9px; height: 9px;   /* clearly visible from the start; "Show me" then points to them */
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: .85;
+  transform: translate(-50%, -50%);
+}
+.guest-note {
+  max-width: 30rem;
+  min-height: 3.5rem;
+  margin: 1.5rem auto 0;
+  color: var(--ink-soft);
+}
+
+/* The closing thought after the web, before the question */
+.after-table {
+  max-width: 34rem;
+  margin: 6rem auto 0;
+  text-align: left;
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  line-height: 1.65;
+}
+
+/* The question that sends you back to the figures */
+.watchers-ask { margin: 8rem auto 0; max-width: 30rem; }
+.watchers-q { margin: 0; font-family: var(--serif); font-style: italic; font-size: clamp(1.375rem, 2.4vw, 1.75rem); }
+.watchers-btn {
+  margin-top: 1.25rem;
+  padding: .7rem 1.4rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  font-size: .875rem;
+  letter-spacing: .03em;
+  transition: background .3s ease, color .3s ease;
+}
+.watchers-btn:hover { background: var(--ink); color: var(--salt); }
+
+/* Spotlight on the horizon figures */
+.watch-ring { fill: none; stroke: var(--brass); stroke-width: 1.5; vector-effect: non-scaling-stroke; opacity: 0; }
+.lunch.spot .watchers { opacity: 1; }
+.lunch.spot .watch-ring { animation: ring 1.2s ease-in-out infinite; }
+@keyframes ring { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+
+/* The label and arrow beside the two dots, revealed by the button */
+.outsider-label {
+  position: absolute;
+  right: 0; top: 60%;
+  width: 12rem;
+  margin: 0;
+  text-align: right;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  color: var(--brass);
+  opacity: 0;
+  transform: translateY(.5rem);
+  transition: opacity .8s ease, transform .8s ease;
+  pointer-events: none;
+}
+.outsider-arrow {
+  position: absolute;
+  left: .5rem;
+  bottom: 100%;
+  width: 8rem;
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.web.reveal .outsider-label { opacity: 1; transform: none; }
+.web.reveal .outsider { background: var(--brass); opacity: 1; animation: pulse 1.6s ease-in-out 3; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(156, 124, 60, .5); } 50% { box-shadow: 0 0 0 8px rgba(156, 124, 60, 0); } }
+
+.segue {
+  margin: 0;
+  text-align: center;
+  padding: clamp(8rem, 22vh, 14rem) 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.75rem, 4vw, 3rem);
+}
+
+/* The whiteout layer: sits over the page but under the line and The light (see --white in script.js) */
+.whiteout {
+  position: fixed; inset: 0;
+  z-index: 1;
+  background: #FFFFFF;
+  opacity: var(--white, 0);
+  pointer-events: none;
+}
+.segue, .frame:last-child { position: relative; z-index: 2; }
+/* centre the line on the whole page, not just the text column */
+.beach-frames .segue {
+  width: 100vw;
+  margin-left: calc(-1 * clamp(1.5rem, 6vw, 6rem));
+  padding-left: 1.5rem; padding-right: 1.5rem;
+}
+
+/* ===== Beach ===== */
+.beach {
+  position: relative;
+  padding: clamp(5rem, 12vh, 9rem) clamp(1.5rem, 6vw, 6rem);
+  background: linear-gradient(180deg, var(--glare), var(--glare) 55%, #FFFFFF 100%); /* the afternoon turns white */
+}
+.beach-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+.beach-place { margin: .75rem 0 0; font-size: .875rem; color: var(--ink-soft); }
+.beach-place span { color: var(--brass); }
+.beach-hint { margin: 2.5rem 0 1rem; font-size: .875rem; color: var(--ink-soft); }
+.beach-field {
+  position: relative;
+  max-width: 52rem;
+  padding: 2rem 0;
+  touch-action: pan-y;
+}
+.beach-text {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 2.8vw, 2.125rem);
+  line-height: 1.5;
+  color: var(--ink);
+  /* bleached by the sun everywhere except under your shade */
+  -webkit-mask-image: radial-gradient(circle 15rem at var(--mx, -50%) var(--my, -50%), #000 0%, #000 45%, rgba(0,0,0,.1) 100%);
+          mask-image: radial-gradient(circle 15rem at var(--mx, -50%) var(--my, -50%), #000 0%, #000 45%, rgba(0,0,0,.1) 100%);
+}
+/* the soft blue shadow that follows you */
+.beach-field::after {
+  content: "";
+  position: absolute;
+  left: var(--fx, -50%); top: var(--fy, -50%);
+  width: 30rem; height: 30rem;
+  margin: -15rem 0 0 -15rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(143, 179, 194, .28), transparent 70%);
+  pointer-events: none;
+}
+/* The four frames: each hotter, each with a smaller circle of shade (--shade is set per frame) */
+.beach-frames { margin-top: 5rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(5rem, 14vh, 9rem); } /* keeps the frames at their normal width */
+.frame-head {
+  display: flex; align-items: baseline; gap: 1rem;
+  margin: 0 0 1.25rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+.frame-num { font-style: normal; font-size: 1rem; color: var(--brass); min-width: 1.75rem; }
+.frame-heat { font-family: var(--sans); font-style: normal; font-size: .875rem; color: var(--brass); }
+.frame-text {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.375rem, 2.4vw, 1.875rem);
+  line-height: 1.55;
+  color: var(--ink);
+  -webkit-mask-image: radial-gradient(circle var(--shade, 15rem) at var(--mx, -50%) var(--my, -50%), #000 0%, #000 45%, rgba(0,0,0,.08) 100%);
+          mask-image: radial-gradient(circle var(--shade, 15rem) at var(--mx, -50%) var(--my, -50%), #000 0%, #000 45%, rgba(0,0,0,.08) 100%);
+}
+.frame-note { margin: 1.25rem 0 0; font-family: var(--serif); font-style: italic; font-size: 1.125rem; color: var(--brass); }
+
+/* phones: no cursor, so the shade rests over the text */
+.beach-field.touch .frame-text,
+.beach-field.touch .beach-text {
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, rgba(0,0,0,.35));
+          mask-image: linear-gradient(180deg, #000 70%, rgba(0,0,0,.35));
+}
+.knocks-intro {
+  position: relative; z-index: 2;
+  max-width: 34rem;
+  margin: 5rem 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  line-height: 1.5;
+}
+.knocks { display: flex; align-items: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
+.knock-btn {
+  width: 6.5rem; height: 6.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--ink);
+  background: transparent;
+  font-size: .875rem;
+  letter-spacing: .04em;
+  transition: transform .15s ease, background .3s ease, color .3s ease;
+}
+.knock-btn:active { transform: scale(.94); }
+.knock-btn:hover { background: var(--ink); color: var(--salt); }
+.knock-btn:disabled { opacity: .3; cursor: default; }
+.knock-btn:disabled:hover { background: transparent; color: var(--ink); }
+.knock-line { margin: 0; font-family: var(--serif); font-size: 1.5rem; min-height: 2.2rem; }
+
+/* Flash on each knock */
+.flash {
+  position: fixed; inset: 0; z-index: 50;
+  background: #fff;
+  pointer-events: none;
+  animation: flash .7s ease-out forwards;
+}
+@keyframes flash { from { opacity: .9; } to { opacity: 0; } }
+
+/* ===== The big quote before Part Two ===== */
+.pull {
+  background: #FFFFFF;
+  padding: clamp(8rem, 22vh, 14rem) clamp(1.5rem, 6vw, 6rem);
+  text-align: center;
+}
+.pull-quote { max-width: 52rem; margin: 0 auto; }
+.pull-quote p {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(2rem, 4.6vw, 3.75rem);
+  line-height: 1.2;
+  color: var(--ink);
+}
+.pull-quote cite {
+  display: block;
+  margin-top: 2rem;
+  font-style: normal;
+  font-size: .875rem;
+  letter-spacing: .03em;
+  color: var(--brass);
+}
+
+/* ===== Part Two ===== */
+.part-two {
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF, var(--cell) 14rem); /* out of the white, into the cell */
+}
+/* Part Two's title page: quiet and minimal, in the cool cell light */
+.part-two-cover {
+  min-height: calc(100svh - clamp(5rem, 12vh, 9rem));
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  margin-bottom: clamp(3rem, 8vh, 6rem);
+}
+.cover-kicker { margin: 0 0 1.25rem; font-family: var(--serif); font-size: 1.25rem; color: var(--brass); }
+.cover-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(3.5rem, 9vw, 7rem);
+  line-height: 1;
+  letter-spacing: -.01em;
+}
+.cover-rule { display: block; width: 3rem; height: 1px; margin: 2.25rem 0 0; background: var(--brass); }
+.part-two-line {
+  margin: 2rem 0 0;
+  max-width: 26rem;
+  font-size: .9375rem;
+  letter-spacing: .02em;
+  color: var(--ink-soft);
+}
+
+/* the rectangle of sky seen from the cell */
+.window {
+  position: absolute;
+  top: calc(clamp(5rem, 12vh, 9rem) - 2rem);
+  right: clamp(4rem, 10vw, 9rem);
+  width: clamp(5rem, 9vw, 8rem);
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(180deg, #F3F7FA, var(--sea));
+  box-shadow: inset 0 0 0 1px rgba(28, 38, 48, .25);
+}
+.window::before, .window::after {
+  content: ""; position: absolute; background: rgba(28, 38, 48, .35);
+}
+.window::before { left: 33%; top: 0; bottom: 0; width: 1px; box-shadow: calc(clamp(5rem, 9vw, 8rem) / 3) 0 0 rgba(28, 38, 48, .35); }
+.window::after { top: 50%; left: 0; right: 0; height: 1px; }
+
+/* ===== Court ===== */
+.court { background: var(--limestone); }
+.court-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+.court-intro { max-width: var(--measure); margin: 1.5rem 0 3rem; }
+.evidence {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1px;
+  background: rgba(28, 38, 48, .14);
+  border: 1px solid rgba(28, 38, 48, .14);
+  max-width: 60rem;
+}
+.card {
+  text-align: left;
+  min-height: 8.5rem;
+  padding: 1.5rem;
+  border: 0;
+  background: var(--salt);
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  line-height: 1.35;
+  transition: background .3s ease, color .3s ease;
+}
+.card[aria-pressed="true"] { background: var(--ink); color: var(--salt); }
+.card.wrong { background: var(--glare); color: var(--ink); }
+.card.right { background: var(--brass); color: var(--salt); }
+.verdict-btn {
+  margin-top: 2.5rem;
+  padding: .9rem 1.6rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  font-size: .875rem;
+  letter-spacing: .03em;
+  transition: background .3s ease, color .3s ease;
+}
+.verdict-btn:hover { background: var(--ink); color: var(--salt); }
+.verdict { max-width: var(--measure); margin-top: 3rem; }
+.verdict-score { font-family: var(--serif); font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; margin: 0 0 1rem; color: var(--brass); }
+
+/* ===== Night ===== */
+.night {
+  position: relative;
+  min-height: 100svh;
+  background: linear-gradient(180deg, var(--limestone), var(--dawn) 25%, #CBD5DF);
+  display: grid;
+  align-content: center;
+  padding: 8rem clamp(1.5rem, 6vw, 6rem);
+  overflow: hidden;
+}
+#sky { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+.night-inner { position: relative; max-width: 38rem; pointer-events: none; }
+.night-title {
+  margin: 0 0 2rem;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+.ending { font-family: var(--serif); font-size: clamp(1.25rem, 2.2vw, 1.625rem); line-height: 1.55; margin: 0; }
+.ending .fr { color: var(--brass); font-style: italic; }
+.closing-note { margin: 2.5rem 0 0; font-size: .875rem; color: var(--ink-soft); white-space: pre-line; }
+
+/* ===== Afterword: your closing words ===== */
+.afterword {
+  padding: clamp(6rem, 16vh, 10rem) clamp(1.5rem, 6vw, 6rem) clamp(3rem, 8vh, 5rem);
+  background: linear-gradient(180deg, #CBD5DF, #CBD5DF);
+}
+.afterword-title {
+  margin: 0 0 2rem;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+.afterword-text {
+  max-width: 38rem;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.25rem, 2.2vw, 1.625rem);
+  line-height: 1.6;
+}
+
+/* ===== About this reading ===== */
+.about {
+  padding: 3rem clamp(1.5rem, 6vw, 6rem) 3rem;
+  border-top: 1px solid rgba(28, 38, 48, .12);
+  background: #CBD5DF;
+}
+.about-title { margin: 0 0 1rem; font-family: var(--serif); font-weight: 400; font-size: 1.75rem; }
+.about-text { margin: 0; max-width: 38rem; }
+.about-links { list-style: none; margin: 1.5rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .75rem; }
+.about-links a {
+  display: inline-block;
+  padding: .55rem 1.1rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: .875rem;
+  transition: background .3s ease, color .3s ease;
+}
+.about-links a:hover { background: var(--ink); color: var(--salt); }
+
+/* ===== Chapter index ===== */
+.toc {
+  position: fixed;
+  left: 1.1rem; top: 50%;
+  transform: translateY(-50%);
+  z-index: 9;
+  display: flex; flex-direction: column; gap: 1.05rem;   /* roomier spacing between chapters */
+  opacity: 0; pointer-events: none;
+  transition: opacity .6s ease;
+}
+.toc.show { opacity: 1; pointer-events: auto; }
+.toc a { position: relative; display: flex; align-items: center; padding: 3px 4px 3px 0; text-decoration: none; color: var(--ink-soft); font-size: .75rem; }
+.toc .dot {
+  flex: none;
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: rgba(28, 38, 48, .25);
+  transition: width .3s ease, background .3s ease;
+}
+.toc a.active .dot { width: 18px; background: var(--brass); }
+.toc .label {
+  position: absolute; left: 1.6rem; top: 50%;   /* takes up no space, so only the dots wake the index */
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-4px);
+  padding: .15rem .55rem;
+  border-radius: 999px;
+  background: rgba(247, 248, 246, .92);
+  white-space: nowrap;
+  transition: opacity .3s ease, transform .3s ease;
+}
+.toc:hover .label, .toc a:focus-visible .label { opacity: 1; transform: none; pointer-events: auto; }
+/* once open, the names are part of the hover area, so the index stays open while you move onto them */
+.toc:hover a::after {
+  content: ""; position: absolute; left: 100%; top: 0; bottom: 0; width: 1.6rem;   /* bridges the gap between dot and name */
+}
+.toc .label { padding: .3rem .75rem; font-size: .8125rem; }
+.toc a.active .label { color: var(--ink); }
+
+/* ===== Sea sound toggle ===== */
+.sound {
+  position: fixed;
+  right: 1.1rem; bottom: 1.1rem;   /* bottom-right, clear of the text and the chapter index */
+  z-index: 9;
+  padding: .45rem .9rem;
+  border: 1px solid rgba(28, 38, 48, .25);
+  border-radius: 999px;
+  background: rgba(247, 248, 246, .85);
+  font-size: .75rem;
+  letter-spacing: .02em;
+  color: var(--ink-soft);
+  transition: border-color .3s ease, color .3s ease;
+}
+.sound:hover, .sound[aria-pressed="true"] { border-color: var(--brass); color: var(--ink); }
+
+/* ===== Footer ===== */
+.footer {
+  position: relative; z-index: 2;
+  padding: 3rem clamp(1.5rem, 6vw, 6rem);
+  font-size: .8125rem;
+  color: var(--ink-soft);
+  background: #CBD5DF;
+}
+.footer p { margin: 0; max-width: 40rem; }
+
+/* ===== Small screens ===== */
+@media (max-width: 720px) {
+  .gauge { right: .75rem; }
+  .clock { right: .5rem; width: 2.5rem; }
+  .toc { display: none; }
+  .sound { right: .75rem; bottom: .75rem; }
+  .intro { grid-template-columns: 1fr; padding-right: clamp(1.5rem, 6vw, 6rem); }
+  .lede-right { margin-top: 1.5em; }
+  .gauge-track { height: 6rem; }
+  .chapter { grid-template-columns: 1fr; }
+  .chapter > div { grid-column: 1; }
+  .chapter::before { margin-bottom: .75rem; }
+  .lunch-steps p { margin-left: 0 !important; margin-right: 0 !important; }
+  .cig-hint { margin: 6.5rem 0 3rem; }
+  .cig-inline { display: block; width: auto; height: 6rem; margin: .5rem 0 0; } /* phones: cigarette on its own line */
+  .sketch-cig { width: 12rem; bottom: 0; }
+  .web { height: 20rem; }
+  .outsider-label { top: auto; bottom: -4.5rem; width: 10rem; font-size: .9375rem; } /* phones: below the web */
+  .guest-note { margin-top: 5.5rem; }
+  .person button { font-size: .9375rem; padding: .35rem .6rem; }
+  .window { position: relative; top: 0; right: 0; margin-bottom: 3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .hero-title span { opacity: 1; transform: none; }
+  .waves, .waves .wave-2 { animation: none; }
+}
